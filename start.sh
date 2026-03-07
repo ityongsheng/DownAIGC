@@ -7,8 +7,10 @@ echo "======================================"
 echo " Anti-AIGC Rewriter (SaaS) Local Start"
 echo "======================================"
 
-# 设置从终端启动时的默认 API Key (为了本地测试方便，可由系统环境变量读取)
-export GEMINI_API_KEY="AIzaSyABIjNKy66EWnm11ZRyl2LJVb_V1p4Mteo"
+# 注意：绝对不要把真实的 API Key 硬编码在这个文件中并提交到公开代码库（如 GitHub）中！
+# 否则会触发安全风控导致 Key 被谷歌立刻封禁作废。
+# 如果想在本地方便使用，可以在终端手动执行 export GEMINI_API_KEY="你的_新_Key" 或填入网页栏
+export GEMINI_API_KEY=""
 
 # 如果当前没有 venv 目录，就自动帮用户创建一个
 if [ ! -d "venv" ]; then

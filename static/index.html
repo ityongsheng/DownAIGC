@@ -225,13 +225,16 @@
         let selectedFile = null;
 
         // Auto-load API Key from LocalStorage or use default fallback if empty
-        const defaultKey = "AIzaSyABIjNKy66EWnm11ZRyl2LJVb_V1p4Mteo";
+        const defaultKey = ""; // 千万不要在前端硬编码真实的 API Key！
         const savedKey = localStorage.getItem('geminiApiKey');
         if (savedKey) {
             apiKeyInput.value = savedKey;
         } else {
             apiKeyInput.value = defaultKey;
-            localStorage.setItem('geminiApiKey', defaultKey);
+            // 只有当有真实值时才存
+            if (defaultKey) {
+                localStorage.setItem('geminiApiKey', defaultKey);
+            }
         }
 
         apiKeyInput.addEventListener('input', (e) => {
