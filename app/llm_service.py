@@ -1,154 +1,248 @@
+"""
+llm_service.py — 编排层（重构后）
+
+作为 API 层和底层模块之间的粘合剂：
+- 调用 file_parser 解析文件
+- 调用 doc_analyzer 分析文档结构
+- 调用 llm_rewriter 逐段重写
+- 调用 doc_builder 构建新文档
+- 保留 generate_paper_stream（论文生成功能）
+- 保留 API key 工具函数
+"""
+
 import re
 import os
-import docx
-import google.generativeai as genai
+import json
+import asyncio
+import traceback
 from typing import AsyncGenerator
 
-SYSTEM_INSTRUCTION = """核心目标是大幅降低 AIGC 检测率。在重写时，请严格遵守以下 6 条规则：
-1.极高文本波动率：交替使用极短句和长复句，绝不使用排比。
-2.提升困惑度：禁用“首先、其次”等连接词，替换为“不可否认的是、结合实际情况来看”。
-3.注入生涩感：术语准确，模仿真实本科生毕设的主观推导口吻。
-4.核心语义不变：保留所有关键数据和论点。
-5.精准锚定并保留参考文献：原文中的标号（如[1],[2]）必须精准转移到重写后对应论点的末尾。
-6.【绝对禁止废话】直接输出重写后的正文内容！绝不允许包含任何解释性、确认性或过渡性的废话（严禁出现“好的，遵从您的指令”、“重构如下”、“前情提要”等词汇）！"""
+from openai import AsyncOpenAI, AuthenticationError
 
-# Ensure output directory exists for docx files
+from app.doc_analyzer import (
+    StructuredParagraph,
+    AnalyzedDocument,
+    analyze_document,
+)
+from app.file_parser import parse_docx_structured, parse_text_to_structured
+from app.llm_rewriter import (
+    rewrite_body_paragraphs,
+    format_error_message,
+    SYSTEM_INSTRUCTION,
+)
+from app.doc_builder import build_document
+
+# Ensure directories exist
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "outputs")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+INPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
+os.makedirs(INPUT_DIR, exist_ok=True)
 
-def smart_chunking(text: str, min_chars: int = 800, max_chars: int = 1200) -> list[str]:
+
+# ────────────────────── API Key 工具 ──────────────────────
+
+def normalize_api_key(raw_key: str) -> str:
+    """Normalize API key copied from UI text, handling common full-width punctuation issues."""
+    key = (raw_key or '').strip()
+    if not key:
+        return ''
+
+    # Normalize common full-width punctuation and whitespace from copy/paste.
+    key = key.replace('：', ':').replace('，', ',').replace('；', ';').replace('　', ' ')
+
+    # Support pasted forms like "Bearer xxx" or "api_key: xxx".
+    lower_key = key.lower()
+    if lower_key.startswith('bearer '):
+        key = key[7:].strip()
+    if ':' in key:
+        left, right = key.split(':', 1)
+        if any(tag in left.lower() for tag in ['api_key', 'apikey', 'token', 'key']):
+            key = right.strip()
+
+    return key
+
+
+def validate_api_key_ascii(key: str) -> None:
+    """Raise a user-friendly error if API key cannot be used as an HTTP header value."""
+    try:
+        key.encode('ascii')
+    except UnicodeEncodeError as exc:
+        raise ValueError('API Key 含有非 ASCII 字符（常见是中文冒号"："或中文空格）。请粘贴纯英文 Key。') from exc
+
+
+# ────────────────────── 核心编排：内容优先模式 ──────────────────────
+
+async def process_paper_stream(
+    text: str,
+    order_id: str,
+    reference_list: str = "",
+    api_key: str = "",
+) -> AsyncGenerator[str, None]:
     """
-    智能分块：按换行符和标点符号切分，确保尽量只在一个段落或长句子结束时截断。
-    每个 chunk 尽量在 800 - 1200 字符。
+    内容优先模式的主编排函数。
+
+    流程：
+    1. 解析文件 → 结构化段落列表
+    2. 分析文档结构 → 标注段落类型
+    3. 逐段重写正文（流式输出）
+    4. 构建全新 docx
     """
-    lines = [line for line in re.split(r'(\n+)', text) if line]
-    chunks = []
-    current_chunk = ""
+    # ── API Key 校验 ──
+    api_key_to_use = normalize_api_key(api_key if api_key else os.environ.get("OPENAI_API_KEY", ""))
+    if not api_key_to_use:
+        yield "\n\n[ERROR] API Key not configured. Please fill in the frontend or set OPENAI_API_KEY env var.\n"
+        return
+    try:
+        validate_api_key_ascii(api_key_to_use)
+    except ValueError as e:
+        yield f"\n\n[ERROR] {format_error_message(e)}\n"
+        return
 
-    def split_into_sentences(text_block: str) -> list[str]:
-        # 匹配中文和英文的句号、感叹号、问号，允许后面跟着右引号或括号，以及空白符
-        pattern = r'([。！？.!?][”\'\]\)]?\s*)'
-        parts = re.split(pattern, text_block)
-        sentences = []
-        curr_s = ""
-        for p in parts:
-            curr_s += p
-            if re.match(pattern, p):
-                sentences.append(curr_s)
-                curr_s = ""
-        if curr_s:
-            sentences.append(curr_s)
-        return sentences
-
-    for line in lines:
-        if len(current_chunk) + len(line) <= max_chars:
-            current_chunk += line
-        else:
-            if len(current_chunk) >= min_chars:
-                chunks.append(current_chunk)
-                current_chunk = line
-            else:
-                sentences = split_into_sentences(line)
-                for s in sentences:
-                    if len(current_chunk) + len(s) > max_chars:
-                        if current_chunk.strip():
-                            chunks.append(current_chunk)
-                        current_chunk = s
-                    else:
-                        current_chunk += s
-
-    if current_chunk.strip():
-        chunks.append(current_chunk)
-
-    return chunks
-
-async def process_paper_stream(text: str, api_key: str, order_id: str, reference_list: str = "") -> AsyncGenerator[str, None]:
-    """
-    接收长文本，智能分块，并用滑动窗口上下文流式重写
-    并在最终将结果保存为 Word 文档。支持全局参考文献注入。
-    """
-    genai.configure(api_key=api_key)
-    
-    # 优先采用 gemini-2.5-pro 模型处理复杂的长文本重写任务
-    model = genai.GenerativeModel(
-        model_name="gemini-2.5-pro",
-        system_instruction=SYSTEM_INSTRUCTION
+    client = AsyncOpenAI(
+        api_key=api_key_to_use,
+        base_url=os.environ.get("OPENAI_BASE_URL", "https://api.siliconflow.cn/v1"),
     )
-
-    chunks = smart_chunking(text)
-    last_output = ""
-    full_rewritten_text = ""
+    model_name = os.environ.get("MODEL_NAME", "deepseek-ai/DeepSeek-V3")
 
     try:
-        for i, chunk in enumerate(chunks):
-            # 构造带全局背景的提示词头部
-            global_context_prompt = ""
-            if reference_list.strip():
-                global_context_prompt = f"【全局知识库】：以下是本文的完整参考文献列表，供你理解引用上下文（你不需要重写此列表，仅作参考）：\n{reference_list}\n\n---\n"
+        # ── Step 1: 解析文件为结构化段落 ──
+        input_filepath = os.path.join(INPUT_DIR, f"input_{order_id}.docx")
+        is_docx = os.path.exists(input_filepath)
 
-            if i == 0:
-                prompt = f"{global_context_prompt}请重写以下学术论文的首个段落/部分：\n\n{chunk}"
+        if is_docx:
+            with open(input_filepath, "rb") as f:
+                file_bytes = f.read()
+            paragraphs = parse_docx_structured(file_bytes)
+            yield "[System] 已解析 docx 文件结构...\n\n"
+        else:
+            paragraphs = parse_text_to_structured(text)
+            yield "[System] 已解析纯文本结构...\n\n"
+
+        # ── Step 2: 分析文档结构 ──
+        analyzed_doc = analyze_document(paragraphs)
+        body_count = sum(
+            1 for ap in analyzed_doc.paragraphs[analyzed_doc.body_start_index:analyzed_doc.body_end_index]
+            if ap.para_type == "body"
+        )
+        yield f"[System] 文档分析完成：共 {len(paragraphs)} 段，其中 {body_count} 段正文待重写...\n\n"
+
+        if body_count == 0:
+            yield "\n[NO_BODY_REWRITTEN] 未命中可改写的正文段落，请检查文档结构或正文起始位置。\n"
+            return
+
+        # ── Step 3: 流式重写正文 ──
+        rewrite_results: dict[int, str] = {}
+        rewritten_count = 0
+        fallback_count = 0
+
+        async for para_idx, original_text, rewritten_text in rewrite_body_paragraphs(
+            analyzed_doc, client, model_name, reference_list
+        ):
+            rewrite_results[para_idx] = rewritten_text
+
+            if rewritten_text.strip() != original_text.strip():
+                rewritten_count += 1
             else:
-                # 滑动窗口：获取上一段返回结果的最后 150 个字符
-                context = last_output[-150:] if len(last_output) >= 150 else last_output
-                prompt = f"{global_context_prompt}请阅读上一段结尾作为前情提要：“{context}”\n\n请重写以下后续的学术论文段落，并确保与新段落的前文过渡自然连贯：\n\n{chunk}"
+                fallback_count += 1
 
-            try:
-                response = await model.generate_content_async(prompt, stream=True)
-            except Exception as e:
-                # Fallback to flash if pro is not found (404)
-                if "404" in str(e) and "not found" in str(e).lower():
-                    yield f"\n[系统提示：检测到当前 API Key 没有 gemini-2.5-pro 权限，自动降级为 gemini-2.5-flash 继续尝试...]\n"
-                    model = genai.GenerativeModel(
-                        model_name="gemini-2.5-flash",
-                        system_instruction=SYSTEM_INSTRUCTION
-                    )
-                    response = await model.generate_content_async(prompt, stream=True)
-                else:
-                    raise e
-            
-            current_chunk_output = ""
-            async for chunk_resp in response:
-                chunk_text = ""
-                try:
-                    if hasattr(chunk_resp, "text") and chunk_resp.text:
-                        chunk_text = chunk_resp.text
-                except Exception as text_e:
-                    # Some chunks might not have text (e.g. safety blocks, citations)
-                    # or the library might throw TypeError on malformed parts
-                    try:
-                        if chunk_resp.candidates and chunk_resp.candidates[0].content.parts:
-                            part = chunk_resp.candidates[0].content.parts[0]
-                            if hasattr(part, "text"):
-                                chunk_text = part.text
-                    except Exception:
-                        pass
-                
-                if chunk_text:
-                    current_chunk_output += chunk_text
-                    full_rewritten_text += chunk_text
-                    yield chunk_text
-                    
-            last_output = current_chunk_output
+            # 流式输出重写后的文本给前端
+            yield rewritten_text
+            yield "\n\n"
 
-            # 在每个 chunk 结束后生成特定分隔符
-            if i < len(chunks) - 1:
-                full_rewritten_text += "\n\n"
-                yield "\n\n"
-    except Exception as e:
-        yield f"\n\n[连线中断或报错]: {str(e)}\n"
-
-    # [新增需求] 重写完成后，将其保存为 DOCX 文件
-    try:
-        doc = docx.Document()
-        for paragraph in full_rewritten_text.split('\n\n'):
-            if paragraph.strip():
-                doc.add_paragraph(paragraph.strip())
-        
+        # ── Step 4: 构建新 docx ──
         output_filepath = os.path.join(OUTPUT_DIR, f"output_{order_id}.docx")
-        doc.save(output_filepath)
-        print(f"[{order_id}] Word document saved to: {output_filepath}")
-    except Exception as e:
-        print(f"[{order_id}] Failed to save word document: {str(e)}")
+        build_document(analyzed_doc, rewrite_results, output_filepath)
+        print(f"[{order_id}] New document built and saved to: {output_filepath}")
 
+        # ── 输出统计 ──
+        if rewritten_count == 0:
+            yield "\n[NO_BODY_REWRITTEN] 未命中可改写的正文段落，请检查文档结构或正文起始位置。\n"
+        else:
+            yield f"\n[STATS] rewritten={rewritten_count};fallback={fallback_count}\n"
+
+    except ValueError as e:
+        yield f"\n\n[ERROR] {format_error_message(e)}\n"
+    except Exception as e:
+        err_msg = format_error_message(e)
+        print(f"[{order_id}] process_paper_stream error: {err_msg}")
+        print(traceback.format_exc())
+        yield f"\n\n[Connection Error]: {err_msg}\n"
+
+
+# ────────────────────── 论文生成功能（保留） ──────────────────────
+
+async def generate_paper_stream(
+    outline: list[str], references: list[str]
+) -> AsyncGenerator[str, None]:
+    """
+    通过 Prompt Chaining 模式，分块生成 AIGC 检测率极低的学术论文。
+    返回 Server-Sent Events (SSE) 格式的数据流。
+    """
+    api_key_to_use = os.environ.get("OPENAI_API_KEY")
+    if not api_key_to_use:
+        yield f"data: {json.dumps({'status': 'error', 'error': 'OPENAI_API_KEY not configured'}, ensure_ascii=False)}\n\n"
+        return
+
+    client = AsyncOpenAI(
+        api_key=api_key_to_use,
+        base_url=os.environ.get("OPENAI_BASE_URL", "https://api.siliconflow.cn/v1"),
+    )
+    model_name = os.environ.get("MODEL_NAME", "deepseek-ai/DeepSeek-V3")
+
+    references_text = "\n".join(references)
+
+    for section in outline:
+        # Step 1: Draft Generation
+        yield f"data: {json.dumps({'status': 'generating_draft', 'section': section}, ensure_ascii=False)}\n\n"
+
+        draft_prompt_text = f"""你是一名大四本科生，正在撰写毕业论文。请根据提供的章节标题撰写学术正文。你必须且只能从我提供的参考文献中提取信息来支撑论点。当引用某篇文献时，必须在句子末尾准确标注上标，例如 [1]。绝对不允许捏造引用。确保逻辑严密、数据准确，避免无意义扩写与口语化表达。
+
+当前章节标题：{section}
+
+参考文献列表：
+{references_text}
+"""
+        try:
+            draft_response = await client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": draft_prompt_text}],
+                stream=False,
+            )
+            draft_text = draft_response.choices[0].message.content
+        except Exception as e:
+            err_msg = format_error_message(e)
+            yield f"data: {json.dumps({'status': 'error', 'section': section, 'error': f'Draft generation failed: {err_msg}'}, ensure_ascii=False)}\n\n"
+            continue
+
+        # Step 2: Humanization
+        yield f"data: {json.dumps({'status': 'humanizing', 'section': section}, ensure_ascii=False)}\n\n"
+
+        humanization_prompt_text = f"""请对以下包含参考文献标注的论文段落执行"学术语域重构与信息密度提升"。
+在重写时，请严格遵守以下规则：
+1. 保留原有事实、数据、术语和结论，不得篡改。
+2. 绝对保留原有参考文献标号 [X]，并确保其仍对应原来的论点，不得错位。
+3. 语言保持正式、克制、书面化，不要写成口语说明文。
+4. 句式允许长短交错，但不要故意写得晦涩，也不要出现机械整齐的套话结构。
+5. 避免套话、空话和机械连接词堆积，不要扩写，整体长度与原文接近。
+6. 只输出正文，不要输出解释、确认、总结或提示语。
+
+待重写段落：
+{draft_text}
+"""
+        try:
+            human_response = await client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": humanization_prompt_text}],
+                stream=False,
+            )
+            final_text = human_response.choices[0].message.content
+        except Exception as e:
+            err_msg = format_error_message(e)
+            yield f"data: {json.dumps({'status': 'error', 'section': section, 'error': f'Humanization failed: {err_msg}'}, ensure_ascii=False)}\n\n"
+            continue
+
+        yield f"data: {json.dumps({'status': 'done', 'section': section, 'content': final_text}, ensure_ascii=False)}\n\n"
+
+        # Optional delay to prevent rate limiting
+        await asyncio.sleep(1)
