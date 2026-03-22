@@ -4,210 +4,365 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anti-AIGC 智能降重系统 (SaaS版)</title>
+    <title>Anti-AIGC Pro | 智能降重系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        .drag-active {
-            border-color: #3b82f6;
-            background-color: #eff6ff;
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.4);
         }
 
-        /* 避免文本框出现系统默认的外发光，使用 tailwind 自身控制 */
-        textarea:focus {
-            outline: none;
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background: radial-gradient(circle at top left, #f8fafc, #f1f5f9);
+            min-height: 100-screen;
+        }
+
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+
+        .drag-active {
+            border-color: var(--primary);
+            background-color: rgba(59, 130, 246, 0.05);
+            transform: scale(1.01);
+        }
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .btn-premium {
+            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-premium:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
         }
     </style>
 </head>
 
-<body class="bg-gray-50 min-h-screen text-gray-800 font-sans">
+<body class="text-slate-800">
 
-    <!-- 顶部导航 -->
-    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-                <span
-                    class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">Anti-AIGC
-                    Pro</span>
-                <span class="px-2 py-1 text-xs font-semibold bg-gray-100 text-gray-600 rounded-full">SaaS 版</span>
+    <!-- Background Elements -->
+    <div class="fixed top-0 left-0 w-full h-full -z-10 overflow-hidden pointer-events-none">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-100/50 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-100/50 rounded-full blur-[120px]"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 glass border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg">
+                    <i class="fas fa-feather-pointed"></i>
+                </div>
+                <div>
+                    <span class="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-700">Anti-AIGC Pro</span>
+                    <span class="ml-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 rounded-md border border-slate-200">SaaS Premium</span>
+                </div>
             </div>
-            <div>
-                <a href="#" class="text-sm font-medium text-gray-500 hover:text-gray-900">使用教程</a>
+            <div class="flex items-center space-x-8">
+                <a href="#" class="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors">使用指南</a>
+                <a href="#" class="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors">价格体系</a>
+                <button class="px-4 py-2 rounded-full text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-all shadow-md">
+                    登录系统
+                </button>
             </div>
         </div>
     </nav>
 
-    <!-- 主体容器 -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full max-w-5xl">
-
-        <!-- 全局提示框 -->
-        <div id="toast"
-            class="hidden fixed top-20 right-4 bg-red-500 text-white px-4 py-2 rounded shadow-lg transition-opacity duration-300 z-50">
-            Error message
+    <div class="max-w-7xl mx-auto px-6 mt-8">
+        <!-- Tabs -->
+        <div class="flex space-x-1 p-1 bg-slate-200/50 rounded-xl w-fit mb-8">
+            <button id="tab-rewriter" class="px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center bg-white text-blue-600 shadow-sm">
+                <i class="fas fa-magic mr-2"></i>智能降重
+            </button>
+            <button id="tab-kb" class="px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center text-slate-600 hover:bg-white/50">
+                <i class="fas fa-book-open mr-2"></i>知识库助手
+            </button>
         </div>
 
-        <!-- 状态A：上传与字数统计 -->
-        <section id="state-a-upload"
-            class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8 transition-all">
-            <div class="p-8">
-                <div class="text-center mb-8">
-                    <h1 class="text-3xl font-extrabold text-gray-900 mb-4">100% 还原人类真实写作逻辑</h1>
-                    <p class="text-lg text-gray-500 max-w-2xl mx-auto">支持自动规避知网/维普/Turnitin 检测，采用“模拟主观逻辑推导”模型重写引擎。</p>
+        <!-- Main Content -->
+        <main id="workspace-container" class="space-y-8 animate-fade-in">
+            <!-- Global Toast -->
+            <div id="toast" class="hidden fixed top-20 right-6 px-6 py-4 rounded-2xl glass border-red-100 shadow-2xl z-[100] transform transition-all duration-500 max-w-md">
+                <div class="flex items-center space-x-3 text-red-600 font-medium">
+                    <i class="fas fa-circle-exclamation text-lg"></i>
+                    <span id="toast-message">Error message</span>
+                </div>
+            </div>
+
+            <!-- State A: Initial View -->
+            <section id="state-a-upload" class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <div class="lg:col-span-12 text-center mb-4">
+                    <h1 class="text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 mb-6">
+                        回归文字本源，让每一段话都<span class="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">更具人情味</span>
+                    </h1>
+                    <p class="text-lg text-slate-500 max-w-2xl mx-auto">
+                        采用深度学习逻辑引擎，模拟人类写作时的语境波动与主观推导，轻松规避各大主流系统的 AIGC 检测。
+                    </p>
                 </div>
 
-                <div class="space-y-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Google Gemini API Key:</label>
-                        <input type="password" id="api-key-input" placeholder="输入您的 API Key..."
-                            class="w-full border-gray-300 rounded-lg shadow-sm border p-3 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                        <p class="text-xs text-gray-400 mt-2">（Key 会自动保存在您的本地浏览器中，绝不上传）</p>
-                    </div>
-
-                    <div id="drop-zone"
-                        class="border-2 border-dashed border-gray-300 rounded-xl p-10 flex flex-col items-center justify-center transition-colors cursor-pointer hover:bg-gray-50">
-                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor"
-                            viewBox="0 0 48 48">
-                            <path d="M28 8H12a4 4 0 00-4 4v28a4 4 0 004 4h24a4 4 0 004-4V20L28 8z" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                            <path d="M28 8v12h12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                            <path d="M16 28h16M16 36h16" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                        </svg>
-                        <div class="text-center">
-                            <p class="text-sm text-gray-600"><span
-                                    class="font-medium text-blue-600 hover:text-blue-500">点击上传文档</span> 或拖拽文件到这里</p>
-                            <p class="text-xs text-gray-500 mt-1">支持 Word (.docx), PDF (.pdf), TXT (.txt) 格式</p>
+                <div class="lg:col-span-7 space-y-6">
+                    <div id="drop-zone" class="glass rounded-3xl p-12 border-2 border-dashed border-slate-300 flex flex-col items-center justify-center transition-all cursor-pointer group">
+                        <div class="w-20 h-20 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-inner">
+                            <i class="fas fa-cloud-arrow-up text-3xl"></i>
                         </div>
-                        <input id="file-upload" name="file-upload" type="file" class="hidden" accept=".docx,.pdf,.txt">
+                        <h3 class="text-xl font-bold text-slate-800 mb-2">上传您的研究成果</h3>
+                        <p class="text-slate-500 text-center mb-6">点击或拖拽文件至此区域<br><span class="text-xs">支持 .docx, .pdf, .txt 格式</span></p>
+                        <input id="file-upload" type="file" class="hidden" accept=".docx,.pdf,.txt">
                     </div>
 
-                    <div class="relative flex py-5 items-center">
-                        <div class="flex-grow border-t border-gray-300"></div>
-                        <span class="flex-shrink-0 mx-4 text-gray-400 text-sm">或者直接粘贴纯文本</span>
-                        <div class="flex-grow border-t border-gray-300"></div>
+                    <div class="glass rounded-3xl p-6">
+                        <label class="block text-sm font-bold text-slate-700 mb-4 flex items-center">
+                            <i class="fas fa-keyboard mr-2 text-blue-500"></i>
+                            粘贴纯文本内容
+                        </label>
+                        <textarea id="raw-text-input" rows="10" 
+                            class="w-full bg-white/50 border border-slate-200 rounded-2xl p-5 text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all resize-none"
+                            placeholder="请在此输入或粘贴需要处理的论文正文..."></textarea>
                     </div>
-
-                    <div class="space-y-2">
-                        <textarea id="raw-text-input" rows="8"
-                            class="w-full border border-gray-300 rounded-xl p-4 text-gray-700 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-y"
-                            placeholder="在这里粘贴您的论文正文..."></textarea>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="block text-sm font-medium text-gray-700">参考文献全局锚定 (可选):</label>
-                        <textarea id="references-input" rows="4"
-                            class="w-full border border-gray-300 rounded-xl p-4 text-gray-700 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-y"
-                            placeholder="如果原文包含 [1] 等引用标号，请在此粘贴完整的参考文献列表，系统将为您精准保留标号位置（选填）"></textarea>
-                    </div>
-
-                    <button id="btn-calculate"
-                        class="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-                        分析字数并计算费用
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <!-- 状态B：收银台 -->
-        <section id="state-b-cashier"
-            class="hidden bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8 transition-all max-w-2xl mx-auto">
-            <div class="p-8 text-center space-y-6">
-                <h2 class="text-2xl font-bold text-gray-900">订单确认与支付</h2>
-
-                <div class="bg-gray-50 py-6 rounded-xl border border-gray-100">
-                    <p class="text-gray-500 mb-2">经统计，您的文章字数总计：</p>
-                    <div class="text-4xl font-extrabold text-gray-900 mb-2" id="display-word-count">0</div>
-                    <p class="text-sm text-gray-400">计费规则：不足 1000 字符按 1000 字符计算（3元 / 千字）</p>
                 </div>
 
-                <div class="flex flex-col items-center justify-center">
-                    <p class="text-lg font-medium text-gray-700 mb-4">需支付金额：<span
-                            class="text-3xl font-bold text-red-600" id="display-price">￥0.00</span></p>
-                    <div class="p-2 border-2 border-dashed border-gray-200 rounded-xl mb-4 bg-white relative">
-                        <img src="/static/pay_qrcode.png" alt="收款码" class="w-48 h-48 object-cover rounded-lg"
-                            onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23cbd5e1\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1\' d=\'M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z\'/></svg>'">
-                        <p class="text-xs text-gray-400 mt-2 absolute bottom-2 w-full text-center">支付二维码加载失败请重试</p>
+                <div class="lg:col-span-5 space-y-6">
+                    <div class="glass rounded-3xl p-8 space-y-6">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-3 flex items-center">
+                                <i class="fas fa-link mr-2 text-indigo-500"></i>
+                                参考文献全局锚定
+                            </label>
+                            <textarea id="references-input" rows="5"
+                                class="w-full bg-white/50 border border-slate-200 rounded-2xl p-4 text-sm text-slate-600 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                                placeholder="输入完整的参考文献列表。系统将根据列表精准保留文中的引用标号 [1] [2]..."></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-3 flex items-center">
+                                <i class="fas fa-key mr-2 text-amber-500"></i>
+                                自定义 API Key (选填)
+                            </label>
+                            <div class="flex gap-3">
+                                <input type="password" id="api-key-input"
+                                    class="flex-1 bg-white/50 border border-slate-200 rounded-2xl p-4 text-sm focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                                    placeholder="默认为您提供系统额度...">
+                                <button id="btn-validate-api-key" type="button"
+                                    class="px-5 rounded-2xl font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors whitespace-nowrap">
+                                    验证 Key
+                                </button>
+                            </div>
+                        </div>
+
+                        <button id="btn-calculate" class="w-full py-5 rounded-2xl font-bold text-white btn-premium shadow-xl text-lg">
+                            启动智能分析
+                        </button>
+
+                        <div class="flex items-center justify-center space-x-4 pt-2">
+                            <div class="flex -space-x-2">
+                                <img class="w-8 h-8 rounded-full border-2 border-white" src="https://ui-avatars.com/api/?name=User1&background=random" alt="">
+                                <img class="w-8 h-8 rounded-full border-2 border-white" src="https://ui-avatars.com/api/?name=User2&background=random" alt="">
+                                <img class="w-8 h-8 rounded-full border-2 border-white" src="https://ui-avatars.com/api/?name=User3&background=random" alt="">
+                            </div>
+                            <span class="text-xs text-slate-500 font-medium font-serif italic">已有 12,408+ 位硕博研究生使用本系统</span>
+                        </div>
                     </div>
-                    <p class="text-sm text-gray-500">支付完成后，系统将自动使用独家降重提示词为您重写文章。</p>
+                </div>
+            </section>
+
+            <!-- State B: Checkout -->
+            <section id="state-b-cashier" class="hidden max-w-2xl mx-auto glass rounded-[40px] overflow-hidden shadow-2xl transition-all scale-100">
+                <div class="p-10 space-y-8 text-center text-slate-800">
+                    <div>
+                        <h2 class="text-3xl font-extrabold mb-2">服务结算</h2>
+                        <p class="text-slate-500">根据精准字数统计生成的最终极客报价</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-6">
+                        <div class="p-6 rounded-3xl bg-blue-50/50 border border-blue-100 italic">
+                            <span class="block text-slate-500 text-sm mb-1">字数总计</span>
+                            <span id="display-word-count" class="text-3xl font-black text-blue-700">0</span>
+                        </div>
+                        <div class="p-6 rounded-3xl bg-indigo-50/50 border border-indigo-100">
+                            <span class="block text-slate-500 text-sm mb-1">服务金额</span>
+                            <span id="display-price" class="text-3xl font-black text-indigo-700">￥0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col items-center">
+                        <div class="relative p-3 bg-white rounded-3xl shadow-lg border border-slate-100 mb-4 group overflow-hidden">
+                            <img src="/static/pay_qrcode.png" alt="Payment QR" class="w-52 h-52 object-contain rounded-xl group-hover:scale-105 transition-transform duration-500"
+                                onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23cbd5e1\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1\' d=\'M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z\'/></svg>'">
+                            <div class="absolute inset-0 bg-white/80 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                <span class="text-xs font-bold text-slate-800 tracking-wider">微信/支付宝扫描支付</span>
+                            </div>
+                        </div>
+                        <p class="text-sm text-slate-400">支付完成后，系统将自动跳转进入降重实验室</p>
+                    </div>
+
+                    <div class="flex space-x-4">
+                        <button id="btn-back-to-upload" class="flex-1 py-4 px-6 rounded-2xl font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                            重新调整
+                        </button>
+                        <button id="btn-confirm-payment" class="flex-1 py-4 px-6 rounded-2xl font-bold text-white bg-green-600 hover:bg-green-700 transition-all shadow-lg hover:shadow-green-200">
+                            支付完成，开始实验室处理
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- State C: Lab Processing -->
+            <section id="state-c-workspace" class="hidden flex flex-col h-[750px] animate-scale-in">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                            <i class="fas fa-flask-vial animate-pulse"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900">高级降重实验室</h2>
+                            <p class="text-sm text-slate-500" id="typing-indicator">引擎已启动，正在进行深度语境重构...</p>
+                            <p class="hidden text-xs text-slate-400 mt-1" id="rewrite-stats"></p>
+                        </div>
+                    </div>
+                    <div id="dl-container" class="hidden">
+                        <button id="btn-download-word" class="btn-premium px-6 py-3 rounded-2xl font-bold text-white flex items-center shadow-lg">
+                            <i class="fas fa-file-word mr-3"></i>导出 Word 终稿
+                        </button>
+                    </div>
                 </div>
 
-                <div class="flex space-x-4">
-                    <button id="btn-back-to-upload"
-                        class="flex-1 py-3 px-4 border border-gray-300 rounded-xl shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-                        返回修改
-                    </button>
-                    <button id="btn-confirm-payment"
-                        class="flex-1 py-3 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
-                        我已完成支付
-                    </button>
-                </div>
-            </div>
-        </section>
+                <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 min-h-0">
+                    <!-- Original -->
+                    <div class="glass rounded-3xl flex flex-col overflow-hidden border border-slate-200">
+                        <div class="px-6 py-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">原文对比区</span>
+                            <span class="text-[10px] px-2 py-0.5 bg-slate-200 text-slate-600 rounded">只读</span>
+                        </div>
+                        <div id="workspace-raw" class="flex-1 p-6 overflow-y-auto text-slate-500 whitespace-pre-wrap font-serif leading-loose text-sm italic"></div>
+                    </div>
 
-        <!-- 状态C：工作台（流式处理） -->
-        <section id="state-c-workspace" class="hidden flex-col h-screen md:h-[800px] mb-8 transition-all">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-2xl font-bold text-gray-900 flex items-center">
-                    深度降重引擎运行中...
-                    <span class="ml-3 inline-flex relative h-3 w-3">
-                        <span
-                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                    <!-- Result -->
+                    <div class="glass rounded-3xl flex flex-col overflow-hidden border-2 border-blue-200 ring-4 ring-blue-500/5">
+                        <div class="px-6 py-3 bg-blue-50/50 border-b border-blue-100 flex justify-between items-center">
+                            <span class="text-xs font-bold text-blue-600 uppercase tracking-widest">极客处理结果</span>
+                            <div class="flex space-x-1">
+                                <div class="w-2 h-2 rounded-full bg-blue-400 animate-bounce"></div>
+                                <div class="w-2 h-2 rounded-full bg-blue-400 animate-bounce [animation-delay:-0.15s]"></div>
+                                <div class="w-2 h-2 rounded-full bg-blue-400 animate-bounce [animation-delay:-0.3s]"></div>
+                            </div>
+                        </div>
+                        <div id="workspace-rewritten" class="flex-1 p-6 overflow-y-auto text-slate-900 whitespace-pre-wrap font-serif leading-loose text-[15px] font-medium"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- KB Container -->
+        <main id="kb-container" class="hidden glass rounded-[40px] overflow-hidden shadow-2xl h-[700px] flex flex-col animate-fade-in mb-8">
+            <div class="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl shadow-inner">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">学术知识库助理</h2>
+                        <p class="text-xs text-slate-500">基于多维语义检索技术为您答疑解惑</p>
+                    </div>
+                </div>
+                <div class="hidden sm:block">
+                    <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full border border-green-200">
+                        Vertex AI Search 正常运行
                     </span>
-                </h2>
-                <div id="dl-container" class="hidden animate-fade-in-up">
-                    <button id="btn-download-word"
-                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors cursor-pointer">
-                        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        保存为 Word 文档
+                </div>
+            </div>
+
+            <div id="chat-messages" class="flex-1 p-8 overflow-y-auto space-y-6 bg-transparent">
+                <div class="flex space-x-4">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-50 flex-shrink-0 flex items-center justify-center text-indigo-500 border border-indigo-100">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="bg-indigo-50/80 border border-indigo-100 rounded-3xl p-5 max-w-[85%] text-slate-700 shadow-sm">
+                        <p class="text-[15px] leading-relaxed">学术泰斗您好！我是您的智能知识库助手。您可以针对特定的学术概念、研究方法或特定领域文献提出问题，我将基于预设的数据源为您进行深度总结与回答。</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 bg-white border-t border-slate-100">
+                <div class="relative flex items-center group">
+                    <input type="text" id="kb-search-input" placeholder="输入您对学术领域的探索问题..."
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl py-5 pl-6 pr-32 text-slate-700 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all shadow-inner">
+                    <button id="btn-kb-search"
+                        class="absolute right-3 py-3 px-6 bg-slate-900 text-white font-bold rounded-xl hover:bg-indigo-600 transition-all shadow-lg flex items-center">
+                        <i class="fas fa-paper-plane mr-2"></i>检索
                     </button>
                 </div>
             </div>
+        </main>
+    </div>
 
-            <div class="flex-1 flex flex-col md:flex-row gap-6 h-full min-h-0">
-                <!-- 左侧：原文 -->
-                <div
-                    class="flex-1 flex flex-col min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 font-medium text-gray-700 text-sm">解析出的原文
-                    </div>
-                    <div class="flex-1 p-4 overflow-y-auto w-full text-gray-600 whitespace-pre-wrap font-serif leading-relaxed text-[15px] outline-none"
-                        id="workspace-raw" readonly></div>
-                </div>
-
-                <!-- 右侧：重写结果 -->
-                <div
-                    class="flex-1 flex flex-col min-h-0 bg-white rounded-xl shadow border border-blue-200 overflow-hidden ring-1 ring-blue-50">
-                    <div class="bg-blue-50 px-4 py-3 border-b border-blue-100 flex justify-between items-center">
-                        <span class="font-medium text-blue-800 text-sm flex items-center">
-                            极客降重最终版本
-                        </span>
-                        <span id="typing-indicator"
-                            class="text-xs text-blue-600 font-medium animate-pulse">正在输入...</span>
-                    </div>
-                    <!-- 打字机效果将显示在这个 div 里 -->
-                    <div class="flex-1 p-4 overflow-y-auto w-full text-gray-800 whitespace-pre-wrap font-serif leading-relaxed text-[15px]"
-                        id="workspace-rewritten"></div>
-                </div>
-            </div>
-        </section>
-
-    </main>
+    <!-- Footer -->
+    <footer class="max-w-7xl mx-auto px-6 py-12 text-center text-slate-400 text-sm border-t border-slate-100 mt-12 bg-white/30 rounded-t-[40px]">
+        <div class="mb-4 flex items-center justify-center space-x-1 font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-400 to-slate-500">
+            <i class="fas fa-feather-pointed mr-2"></i>Anti-AIGC Pro Technology
+        </div>
+        <p>© 2026 Anti-AIGC 智能实验室. 遵循人类自然写作范式.</p>
+    </footer>
 
     <script>
         // DOM Elements
-        const elStateA = document.getElementById('state-a-upload');
-        const elStateB = document.getElementById('state-b-cashier');
-        const elStateC = document.getElementById('state-c-workspace');
-        const elToast = document.getElementById('toast');
+        const stateA = document.getElementById('state-a-upload');
+        const stateB = document.getElementById('state-b-cashier');
+        const stateC = document.getElementById('state-c-workspace');
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toast-message');
 
         const fileInput = document.getElementById('file-upload');
         const dropZone = document.getElementById('drop-zone');
         const textInput = document.getElementById('raw-text-input');
         const referencesInput = document.getElementById('references-input');
         const apiKeyInput = document.getElementById('api-key-input');
+        const btnValidateApiKey = document.getElementById('btn-validate-api-key');
         const btnCalculate = document.getElementById('btn-calculate');
+
+        const tabRewriter = document.getElementById('tab-rewriter');
+        const tabKb = document.getElementById('tab-kb');
+        const workspaceContainer = document.getElementById('workspace-container');
+        const kbContainer = document.getElementById('kb-container');
+
+        const kbSearchInput = document.getElementById('kb-search-input');
+        const btnKbSearch = document.getElementById('btn-kb-search');
+        const chatMessages = document.getElementById('chat-messages');
 
         const displayWordCount = document.getElementById('display-word-count');
         const displayPrice = document.getElementById('display-price');
@@ -217,141 +372,160 @@
         const workspaceRaw = document.getElementById('workspace-raw');
         const workspaceRewritten = document.getElementById('workspace-rewritten');
         const typingIndicator = document.getElementById('typing-indicator');
+        const rewriteStats = document.getElementById('rewrite-stats');
         const dlContainer = document.getElementById('dl-container');
         const btnDownloadWord = document.getElementById('btn-download-word');
 
         let currentOrderId = null;
         let currentExtractedText = "";
         let selectedFile = null;
+        let currentPreserveFormatSupported = false;
 
-        // Auto-load API Key from LocalStorage or use default fallback if empty
-        const defaultKey = "AIzaSyABIjNKy66EWnm11ZRyl2LJVb_V1p4Mteo";
-        const savedKey = localStorage.getItem('geminiApiKey');
-        if (savedKey) {
-            apiKeyInput.value = savedKey;
-        } else {
-            apiKeyInput.value = defaultKey;
-            localStorage.setItem('geminiApiKey', defaultKey);
-        }
+        // Init
+        const storedApiKey = localStorage.getItem('last_successful_api_key');
+        if (storedApiKey) apiKeyInput.value = storedApiKey;
 
-        apiKeyInput.addEventListener('input', (e) => {
-            localStorage.setItem('geminiApiKey', e.target.value.trim());
-        });
-
-        // Utilities
         function showToast(msg) {
-            elToast.textContent = msg;
-            elToast.classList.remove('hidden');
-            setTimeout(() => elToast.classList.add('hidden'), 3500);
+            toastMsg.textContent = msg;
+            toast.classList.remove('hidden', 'opacity-0', 'translate-y-4');
+            toast.classList.add('flex', 'opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-4');
+                setTimeout(() => toast.classList.add('hidden'), 500);
+            }, 4000);
         }
 
-        function switchState(targetState) {
-            [elStateA, elStateB, elStateC].forEach(el => el.classList.add('hidden'));
-            targetState.classList.remove('hidden');
+        function switchState(target) {
+            [stateA, stateB, stateC].forEach(el => {
+                el.classList.add('hidden');
+            });
+            target.classList.remove('hidden');
+            target.classList.add('animate-fade-in');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // --- View Logic: State A (Upload/Input) ---
+        function extractStreamErrorMessage(text) {
+            const lines = (text || '').split(/\r?\n/);
+            for (const line of lines) {
+                if (line.includes('[Connection Error]') || line.includes('[ERROR]')) {
+                    return line.trim();
+                }
+            }
+            return '';
+        }
 
+        function extractRewriteStats(text) {
+            const match = (text || '').match(/\[STATS\]\s*rewritten=(\d+);fallback=(\d+)/);
+            if (!match) return null;
+            return {
+                rewritten: Number(match[1]),
+                fallback: Number(match[2]),
+            };
+        }
+
+        function normalizeApiKeyInput(raw) {
+            let key = (raw || '').trim();
+            key = key.replace(/：/g, ':').replace(/，/g, ',').replace(/；/g, ';').replace(/　/g, ' ');
+            if (/^bearer\s+/i.test(key)) key = key.replace(/^bearer\s+/i, '').trim();
+            if (/:/.test(key)) {
+                const idx = key.indexOf(':');
+                const left = key.slice(0, idx).toLowerCase();
+                if (left.includes('api_key') || left.includes('apikey') || left.includes('token') || left.includes('key')) {
+                    key = key.slice(idx + 1).trim();
+                }
+            }
+            return key;
+        }
+
+        async function validateApiKey() {
+            const normalizedApiKey = normalizeApiKeyInput(apiKeyInput.value);
+            if (!normalizedApiKey) return showToast('请先填写 API Key');
+
+            btnValidateApiKey.disabled = true;
+            btnValidateApiKey.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>验证中`;
+
+            try {
+                const res = await fetch('/api/validate_api_key', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: normalizedApiKey })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || '验证失败');
+                localStorage.setItem('last_successful_api_key', normalizedApiKey);
+                showToast(data.message || 'API Key 验证通过');
+            } catch (err) {
+                showToast(err.message);
+            } finally {
+                btnValidateApiKey.disabled = false;
+                btnValidateApiKey.textContent = '验证 Key';
+            }
+        }
+
+        // Logic
         dropZone.addEventListener('click', () => fileInput.click());
-
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, preventDefaults, false);
-        });
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-active'), false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-active'), false);
-        });
-
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => dropZone.addEventListener(e, (ev) => { ev.preventDefault(); ev.stopPropagation(); }));
+        ['dragenter', 'dragover'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.add('drag-active')));
+        ['dragleave', 'drop'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.remove('drag-active')));
         dropZone.addEventListener('drop', (e) => {
-            let dt = e.dataTransfer;
-            let files = dt.files;
-            if (files.length) {
-                selectedFile = files[0];
-                textInput.placeholder = `已选中文件: ${selectedFile.name}。\n(上传文件将优先于下方文本框生效)`;
-                textInput.value = "";
-                textInput.disabled = true;
-                textInput.classList.add('opacity-50', 'cursor-not-allowed');
-            }
+            if (e.dataTransfer.files.length) handleFileSelect(e.dataTransfer.files[0]);
         });
-
         fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length) {
-                selectedFile = e.target.files[0];
-                textInput.placeholder = `已选中文件: ${selectedFile.name}。\n(取消选择可重新在此粘贴文本)`;
-                textInput.value = "";
-                textInput.disabled = true;
-                textInput.classList.add('opacity-50', 'cursor-not-allowed');
-            }
+            if (e.target.files.length) handleFileSelect(e.target.files[0]);
         });
+        btnValidateApiKey.addEventListener('click', validateApiKey);
+
+        function handleFileSelect(file) {
+            selectedFile = file;
+            textInput.placeholder = `已选定文件：${file.name} (已锁定粘贴模式)`;
+            textInput.value = "";
+            textInput.disabled = true;
+            textInput.classList.add('bg-slate-100', 'cursor-not-allowed', 'opacity-60');
+        }
 
         btnCalculate.addEventListener('click', async () => {
-            const apiKey = apiKeyInput.value.trim();
-
-            const textValue = textInput.value.trim();
-            if (!selectedFile && !textValue) {
-                return showToast("请上传文档或粘贴需要降重的文本。");
-            }
+            if (!selectedFile && !textInput.value.trim()) return showToast("请输入论文正文或上传附件");
 
             btnCalculate.disabled = true;
-            btnCalculate.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 计费服务器解析中...`;
+            btnCalculate.innerHTML = `<i class="fas fa-spinner fa-spin mr-3"></i> 处理中...`;
 
             try {
                 const formData = new FormData();
-                if (selectedFile) {
-                    formData.append('file', selectedFile);
-                } else {
-                    formData.append('text', textValue);
-                }
+                if (selectedFile) formData.append('file', selectedFile);
+                else formData.append('text', textInput.value.trim());
 
-                const res = await fetch('/api/upload_and_calculate', {
-                    method: 'POST',
-                    body: formData
-                });
-
+                const res = await fetch('/api/upload_and_calculate', { method: 'POST', body: formData });
                 const data = await res.json();
-
-                if (!res.ok) throw new Error(data.detail || "解析失败");
+                if (!res.ok) throw new Error(data.detail || "解析异常");
 
                 currentOrderId = data.order_id;
                 currentExtractedText = data.text;
-
+                currentPreserveFormatSupported = !!data.preserve_format_supported;
                 displayWordCount.textContent = data.word_count.toLocaleString();
                 displayPrice.textContent = `￥${data.price.toFixed(2)}`;
-
-                switchState(elStateB);
+                switchState(stateB);
             } catch (err) {
                 showToast(err.message);
             } finally {
                 btnCalculate.disabled = false;
-                btnCalculate.textContent = "分析字数并计算费用";
+                btnCalculate.textContent = "启动智能分析";
             }
         });
 
-        // --- View Logic: State B (Cashier) ---
-
         btnBackToUpload.addEventListener('click', () => {
-            switchState(elStateA);
-            currentOrderId = null;
-            currentExtractedText = "";
-            textInput.disabled = false;
-            textInput.classList.remove('opacity-50', 'cursor-not-allowed');
-            fileInput.value = "";
+            switchState(stateA);
             selectedFile = null;
-            textInput.placeholder = "在这里粘贴您的论文正文...";
+            currentPreserveFormatSupported = false;
+            textInput.disabled = false;
+            textInput.value = "";
+            textInput.placeholder = "请在此输入或粘贴需要处理的论文正文...";
+            textInput.classList.remove('bg-slate-100', 'cursor-not-allowed', 'opacity-60');
+            fileInput.value = "";
         });
 
         btnConfirmPayment.addEventListener('click', async () => {
             btnConfirmPayment.disabled = true;
-            btnConfirmPayment.textContent = "验证订单中...";
+            btnConfirmPayment.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>正在验证...`;
 
             try {
                 const res = await fetch('/api/verify_payment', {
@@ -363,82 +537,203 @@
                 if (data.status === 'success') {
                     workspaceRaw.textContent = currentExtractedText;
                     workspaceRewritten.textContent = "";
-                    dlContainer.classList.add('hidden');
-                    typingIndicator.textContent = "正在思考和改写...";
-                    switchState(elStateC);
-                    startStreamingRewrite();
-                } else {
-                    throw new Error("支付未能验证成功。");
-                }
+                    rewriteStats.classList.add('hidden');
+                    rewriteStats.textContent = "";
+                    switchState(stateC);
+                    startStreaming();
+                } else throw new Error("验证失败，请确认支付状态");
             } catch (err) {
                 showToast(err.message);
                 btnConfirmPayment.disabled = false;
-                btnConfirmPayment.textContent = "我已完成支付";
+                btnConfirmPayment.textContent = "支付完成，开始实验室处理";
             }
         });
 
-        // --- View Logic: State C (Workspace Streaming) ---
-
-        async function startStreamingRewrite() {
+        async function startStreaming() {
             try {
-                const payload = {
-                    text: currentExtractedText,
-                    api_key: apiKeyInput.value.trim(),
-                    order_id: currentOrderId,
-                    references: referencesInput.value.trim()
-                };
-
                 const res = await fetch('/api/rewrite', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'text/plain'
-                    },
-                    body: JSON.stringify(payload)
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: currentExtractedText,
+                        order_id: currentOrderId,
+                        references: referencesInput.value.trim(),
+                        api_key: normalizeApiKeyInput(apiKeyInput.value)
+                    })
                 });
-
-                if (!res.ok) {
-                    const errObj = await res.json();
-                    throw new Error(errObj.detail || `HTTP Error ${res.status}`);
-                }
+                if (!res.ok) throw new Error((await res.json()).detail || "服务器响应异常");
 
                 const reader = res.body.getReader();
-                const decoder = new TextDecoder("utf-8");
-                let done = false;
-
-                while (!done) {
-                    const { value, done: readerDone } = await reader.read();
-                    done = readerDone;
-                    if (value) {
-                        const chunkStr = decoder.decode(value, { stream: true });
-                        // typewriter effect
-                        workspaceRewritten.textContent += chunkStr;
-                        // scroll to bottom
-                        workspaceRewritten.scrollTop = workspaceRewritten.scrollHeight;
+                const decoder = new TextDecoder();
+                let hasStreamError = false;
+                let noBodyRewritten = false;
+                let stats = null;
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunkText = decoder.decode(value, { stream: true });
+                    const maybeStats = extractRewriteStats(chunkText);
+                    if (maybeStats) {
+                        stats = maybeStats;
+                        continue;
                     }
+                    workspaceRewritten.textContent += chunkText;
+                    if (chunkText.includes('[Connection Error]') || chunkText.includes('[ERROR]')) {
+                        hasStreamError = true;
+                    }
+                    if (chunkText.includes('[NO_BODY_REWRITTEN]')) {
+                        noBodyRewritten = true;
+                    }
+                    workspaceRewritten.scrollTop = workspaceRewritten.scrollHeight;
                 }
 
-                typingIndicator.classList.remove('animate-pulse', 'text-blue-600');
-                typingIndicator.classList.add('text-green-600');
-                typingIndicator.innerHTML = '<svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>降重已完成';
-                dlContainer.classList.remove('hidden');
+                if (hasStreamError) {
+                    typingIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>处理异常终止';
+                    dlContainer.classList.add('hidden');
+                    const detailedError = extractStreamErrorMessage(workspaceRewritten.textContent);
+                    showToast(detailedError || '处理过程中出现连接异常，未生成可下载文档');
+                    return;
+                }
 
+                if (noBodyRewritten) {
+                    typingIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-amber-500 mr-2"></i>未命中正文处理区';
+                    rewriteStats.classList.add('hidden');
+                    dlContainer.classList.add('hidden');
+                    showToast('未命中可改写的正文段落，请检查文档中的摘要、标题或正文起始位置');
+                    return;
+                }
+
+                typingIndicator.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-2"></i>重塑完成';
+                if (stats) {
+                    rewriteStats.textContent = `本次改写 ${stats.rewritten} 段，回退原文 ${stats.fallback} 段${stats.fallback > stats.rewritten ? '，当前策略偏保守' : ''}`;
+                    rewriteStats.classList.remove('hidden');
+                } else {
+                    rewriteStats.classList.add('hidden');
+                }
+                dlContainer.classList.remove('hidden');
+                const normalizedApiKey = normalizeApiKeyInput(apiKeyInput.value);
+                if (normalizedApiKey) localStorage.setItem('last_successful_api_key', normalizedApiKey);
+                if (!currentPreserveFormatSupported) {
+                    showToast('已生成可下载 Word。原始格式完整保留仅支持上传 .docx 文件时生效');
+                }
             } catch (err) {
-                showToast(`连线中断或报错: ${err.message}`);
-                typingIndicator.textContent = "运行异常中止";
-                typingIndicator.classList.remove('animate-pulse');
-                typingIndicator.classList.add('text-red-600');
+                showToast("连接中断: " + err.message);
+                typingIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>处理异常终止';
             }
         }
 
-        // --- Download Word Document ---
         btnDownloadWord.addEventListener('click', () => {
-            if (!currentOrderId) return;
-            // Native way to prompt download via backend endpoint
-            window.location.href = `/api/download/${currentOrderId}`;
+            saveOutputToFixedPath();
         });
 
+        async function saveOutputToFixedPath() {
+            try {
+                btnDownloadWord.disabled = true;
+                btnDownloadWord.innerHTML = `<i class="fas fa-spinner fa-spin mr-3"></i>正在导出`;
+
+                const res = await fetch('/api/save_output', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_id: currentOrderId })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || '导出失败');
+                showToast(data.message || '文件已导出');
+            } catch (err) {
+                showToast(err.message);
+            } finally {
+                btnDownloadWord.disabled = false;
+                btnDownloadWord.innerHTML = `<i class="fas fa-file-word mr-3"></i>导出 Word 终稿`;
+            }
+        }
+
+        // Tabs
+        tabRewriter.addEventListener('click', () => {
+            tabRewriter.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+            tabRewriter.classList.remove('text-slate-600', 'hover:bg-white/50');
+            tabKb.classList.remove('bg-white', 'text-blue-600', 'shadow-sm');
+            tabKb.classList.add('text-slate-600', 'hover:bg-white/50');
+            workspaceContainer.classList.remove('hidden');
+            kbContainer.classList.add('hidden');
+        });
+
+        tabKb.addEventListener('click', () => {
+            tabKb.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+            tabKb.classList.remove('text-slate-600', 'hover:bg-white/50');
+            tabRewriter.classList.remove('bg-white', 'text-blue-600', 'shadow-sm');
+            tabRewriter.classList.add('text-slate-600', 'hover:bg-white/50');
+            kbContainer.classList.remove('hidden');
+            workspaceContainer.classList.add('hidden');
+        });
+
+        // KB Search
+        let session_id = "-";
+        async function runKbSearch() {
+            const query = kbSearchInput.value.trim();
+            if (!query) return;
+
+            // User msg
+            chatMessages.innerHTML += `<div class="flex justify-end mb-6"><div class="bg-blue-600 text-white rounded-3xl rounded-tr-none p-5 max-w-[85%] shadow-lg shadow-blue-100 text-sm font-medium animate-slide-in-right">${query}</div></div>`;
+            kbSearchInput.value = '';
+            btnKbSearch.disabled = true;
+            btnKbSearch.innerHTML = `<i class="fas fa-sync fa-spin"></i>`;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const res = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, session_id })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || "搜索失败");
+
+                session_id = data.session_id;
+                let refs = "";
+                if (data.references?.length) {
+                    refs = `<div class="mt-4 pt-4 border-t border-slate-100 text-[11px] text-slate-400 font-bold uppercase tracking-widest mb-3">参考文献</div><ul class="space-y-2">`;
+                    data.references.forEach(r => {
+                        refs += `<li class="text-xs text-blue-600 hover:underline cursor-pointer flex items-center"><i class="fas fa-link mr-2 text-[10px]"></i>${r.title || r.uri}</li>`;
+                    });
+                    refs += `</ul>`;
+                }
+
+                chatMessages.innerHTML += `
+                    <div class="flex space-x-4 mb-6 animate-slide-in-left">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-50 flex-shrink-0 flex items-center justify-center text-indigo-500 border border-indigo-100">
+                            <i class="fas fa-robot text-sm"></i>
+                        </div>
+                        <div class="bg-indigo-50/80 border border-indigo-100 rounded-3xl rounded-tl-none p-6 max-w-[85%] text-slate-700 shadow-sm">
+                            <div class="text-[15px] leading-relaxed">${data.answer.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>')}</div>
+                            ${refs}
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                chatMessages.innerHTML += `<div class="flex space-x-4 mb-6"><div class="text-red-500 text-xs italic p-4 bg-red-50 rounded-2xl w-full">Error: ${err.message}</div></div>`;
+            } finally {
+                btnKbSearch.disabled = false;
+                btnKbSearch.innerHTML = `<i class="fas fa-paper-plane mr-2"></i>检索`;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        btnKbSearch.addEventListener('click', runKbSearch);
+        kbSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') runKbSearch(); });
+
     </script>
+
+    <style>
+        .animate-fade-in { animation: fadeIn 0.8s ease-out; }
+        .animate-scale-in { animation: scaleIn 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .animate-slide-in-right { animation: slideInRight 0.4s ease-out; }
+        .animate-slide-in-left { animation: slideInLeft 0.4s ease-out; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+    </style>
 </body>
 
 </html>
